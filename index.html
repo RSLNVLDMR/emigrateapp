@@ -180,22 +180,19 @@
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   try { tg && tg.ready(); tg && tg.expand(); } catch(e) {}
 
-  // === Открыть личный чат с поддержкой (emigrate_support) ===
+  // === Открыть личный чат с поддержкой (@emigrate_support) ===
   function openSupportChat() {
-    const urlTme = 'https://t.me/emigrate_support';
-    const tgById = 'tg://user?id=7437456248'; // глубокая ссылка по ID (необязательно)
-
-    try { tg?.HapticFeedback?.impactOccurred('light'); } catch {}
-
+    // 1) внутри Telegram — через WebApp API
     if (tg && typeof tg.openTelegramLink === 'function') {
-      // Надёжно для мини-аппа: Telegram сам решит, чем открыть ссылку
-      tg.openTelegramLink(urlTme);
-      // Доп. попытка через tg:// по ID
-      setTimeout(() => { try { tg.openTelegramLink(tgById); } catch {} }, 200);
-    } else {
-      // Локальная отладка в обычном браузере
-      window.location.href = urlTme;
+      try { tg.HapticFeedback?.impactOccurred('light'); } catch {}
+      // сначала пробуем tg:// (внутри клиента)
+      tg.openTelegramLink('tg://resolve?domain=emigrate_support');
+      // запасной вариант — https:
+      setTimeout(() => { try { tg.openTelegramLink('https://t.me/emigrate_support'); } catch {} }, 250);
+      return;
     }
+    // 2) в обычном браузере (отладка)
+    window.location.href = 'https://t.me/emigrate_support';
   }
 
   // ===== ПРОСТЕЙШЕЕ СОСТОЯНИЕ (localStorage)
@@ -312,7 +309,7 @@
       return;
     }
     if(kind==='bookAssistant'){
-      // ← Start a chat: открываем чат поддержки
+      // ← Start a chat: открываем чат поддержки (фикс от telegram.org)
       openSupportChat();
       return;
     }
