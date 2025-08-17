@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>eMigrant — Miniapp MVP</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Telegram Web Apps SDK (безопасно подключать; в обычном браузере просто не используется) -->
+  <!-- Telegram Web Apps SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root{--bg:#0f1115;--card:#171a21;--text:#e7eaf0;--muted:#9aa3b2;--accent:#7cdfff;--line:#242936;--ok:#33d69e;--warn:#ffb84d;}
@@ -180,6 +180,24 @@
   const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
   try { tg && tg.ready(); tg && tg.expand(); } catch(e) {}
 
+  // === Открыть личный чат с поддержкой (@emigrate_support) ===
+  function openSupportChat() {
+    const urlTme = 'https://t.me/emigrate_support';
+    const tgById = 'tg://user?id=7437456248'; // глубокая ссылка по ID (необязательно)
+
+    try { tg?.HapticFeedback?.impactOccurred('light'); } catch {}
+
+    if (tg && typeof tg.openTelegramLink === 'function') {
+      // Надёжно для мини-аппа: Telegram сам решит, чем открыть ссылку
+      tg.openTelegramLink(urlTme);
+      // Доп. попытка через tg:// по ID
+      setTimeout(() => { try { tg.openTelegramLink(tgById); } catch {} }, 200);
+    } else {
+      // Локальная отладка в обычном браузере
+      window.location.href = urlTme;
+    }
+  }
+
   // ===== ПРОСТЕЙШЕЕ СОСТОЯНИЕ (localStorage)
   const st = {
     track: localStorage.getItem('track') || null,
@@ -229,7 +247,6 @@
     if (has('Family')) return 'family';
     if (has('Dzialalnosc')) return 'business';
     if (has('UoP') || has('UoD') || has('UoZ')) return 'work';
-    // дефолт — работа (чтобы не оставлять пустым)
     return 'work';
   }
 
@@ -246,7 +263,6 @@
     document.getElementById('totalCount').innerText = total;
     document.getElementById('progressBar').style.width = Math.round(done/total*100)+'%';
 
-    // офис-хинт
     document.getElementById('officeHint').innerText = st.profile?.voivodeship ? officeHintByVoiv(st.profile.voivodeship) : '';
 
     st.tasks.forEach(t=>{
@@ -286,7 +302,6 @@
   }
 
   function openModule(kind){
-    // Заглушки модулей (как раньше)
     if(kind==='aiTranslator'){
       alert('AI Translator: Загрузите письмо/документ → перевод и краткое резюме. (В MVP-заглушке загрузка опущена)');
       return;
@@ -297,9 +312,8 @@
       return;
     }
     if(kind==='bookAssistant'){
-      const text = prompt('Коротко опишите, о чём поговорить. Заявка уйдёт в отдельный чат-аккаунт.');
-      alert('Заявка отправлена. Нажмите ОК, чтобы открыть чат с ассистентом.');
-      if(tg && tg.openTelegramLink) tg.openTelegramLink('https://t.me/'+(tg.initDataUnsafe?.user?.username||''));
+      // ← Start a chat: открываем чат поддержки
+      openSupportChat();
       return;
     }
     if(kind==='photos'){
@@ -309,8 +323,7 @@
     if(kind==='insurance'){
       const has = confirm('Есть действующая страховка? Нажмите OK если да, Отмена если пока нет.');
       if(!has){
-        alert('Нажмите «Написать в чат», чтобы обсудить, как оформить страховку.');
-        if(tg && tg.openTelegramLink) tg.openTelegramLink('https://t.me/'+(tg.initDataUnsafe?.user?.username||'')); // заглушка
+        alert('Нажмите «Start a chat», чтобы обсудить, как оформить страховку.');
       } else {
         alert('Загрузите полис. AI-проверка: срок действия и реквизиты.');
       }
@@ -365,7 +378,6 @@
   function prevQ(n){ showQ(n) }
 
   function finishOnb(){
-    // собираем ответы
     const firstName = document.getElementById('firstName').value.trim();
     const lastName = document.getElementById('lastName').value.trim();
     const voivodeship = document.getElementById('voivodeship').value;
@@ -378,11 +390,9 @@
       .filter(el=>el.checked)
       .map(el=>el.value);
 
-    // определяем трек по основаниям
     const track = determineTrack(grounds);
     const trackLabel = track==='work'?'Работа':track==='study'?'Учёба':track==='family'?'Семья':'Бизнес';
 
-    // сохраняем профиль
     st.profile = { firstName, lastName, voivodeship, citizenship, stayLength, currentStatus, grounds, income, goal, track, trackLabel };
     localStorage.setItem('profile', JSON.stringify(st.profile));
 
